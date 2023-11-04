@@ -1,0 +1,46 @@
+//
+//  ShellConfiguration.swift
+//  
+//
+//  Created by Max Chuquimia on 4/11/2023.
+//
+
+import Foundation
+
+public struct ShellConfiguration {
+
+    /// A character set to trim from any output returned by running a command. Defaults to newlines and whitespace.
+    public let defaultOutputTrimming: CharacterSet
+
+    /// The default shell to use with `-c` whilst discovering a command's path. Defaults to `/bin/sh`.
+    public let defaultShell: String
+
+    /// Whether a command's standard output should be printed as it runs.
+    public let echoStandardError: Bool
+
+    /// Whether a command's standard error outout should be printed as it runs.
+    public let echoStandardOutput: Bool
+
+    /// Whether a command's input params names should have underscores replaces with dashes. Defualts to `true`.
+    public let replaceUnderscoresWithDashes: Bool
+
+    /// Whether a command and its arguments should be printed before it is run. Defaults to `false`, useful for debugging.
+    public let xtrace: Bool
+
+    public init(
+        defaultOutputTrimming: CharacterSet = .whitespacesAndNewlines,
+        defaultShell: String = "/bin/sh",
+        echoStandardError: Bool = true,
+        echoStandardOutput: Bool = true,
+        replaceUnderscoresWithDashes: Bool = true,
+        xtrace: Bool = false
+    ) {
+        self.defaultOutputTrimming = defaultOutputTrimming
+        self.defaultShell = defaultShell
+        self.echoStandardError = echoStandardError
+        self.echoStandardOutput = echoStandardOutput
+        self.replaceUnderscoresWithDashes = replaceUnderscoresWithDashes
+        self.xtrace = xtrace
+    }
+
+}
