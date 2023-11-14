@@ -10,7 +10,7 @@ import Darwin
 
 /// A shell command.
 @dynamicCallable
-public class Command {
+open class Command {
     public let commandName: String
     public var commandPath: String
     public var configuration: ShellConfiguration
@@ -25,6 +25,12 @@ public class Command {
             .replacingOccurrences(of: ".type", with: "")
 
         self.commandPath = try Shell.which(command: self.commandName, shell: configuration.defaultShell)
+    }
+
+    public init(commandName: String, commandPath: String, configuration: ShellConfiguration = .init()) {
+        self.commandName = commandName
+        self.commandPath = commandPath
+        self.configuration = configuration
     }
 
     /// Calls the command with a raw list of arguments, e.g. `command("-a", "1", "--verbose")`
@@ -55,7 +61,7 @@ public class Command {
     }
 
     /// Overridable function called to interface with the real Shell.
-    public func execute(using args: [String]) throws -> String {
+    open func execute(using args: [String]) throws -> String {
         try Shell.executeRaw(path: commandPath, args: args, configuration: configuration)
     }
 
