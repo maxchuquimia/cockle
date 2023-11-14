@@ -93,8 +93,9 @@ public struct ExecutionError: LocalizedError {
 
 }
 
-extension Shell {
+public extension Shell {
 
+    /// Silently find the path to a specific command
     static func which(command: String, shell: String) throws -> String {
         do {
             return try Shell.executeRaw(
