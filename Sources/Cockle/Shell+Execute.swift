@@ -84,11 +84,7 @@ public struct ExecutionError: LocalizedError {
     public let stderr: String
 
     public var errorDescription: String? {
-        if stderr.isEmpty {
-            stdout
-        } else {
-            stderr
-        }
+        "\(command) exited with error code \(code)."
     }
 
 }
