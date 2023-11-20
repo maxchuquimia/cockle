@@ -25,32 +25,52 @@ public extension Shell {
         task.arguments = args
         task.executableURL = URL(fileURLWithPath: path)
 
-        task.launch()
-
-        var standardOutput = ""
-        var errorOutput = ""
+        // Read large volumes of data in the most O(1)-y way we can
+        var standardOutputChunkMap: [Int: Data] = [:]
+        var standardOutputChunkCount = 0
+        var standardErrorChunkMap: [Int: Data] = [:]
+        var standardErrorChunkCount = 0
 
         standardOutputPipe.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
             guard !data.isEmpty else { return }
-            let additionalOutput = String(data: data, encoding: .utf8)!
-            standardOutput += additionalOutput
+            standardOutputChunkMap[standardOutputChunkCount] = data
+            standardOutputChunkCount += 1
+
             if configuration.echoStandardOutput {
-                fputs(additionalOutput, Darwin.stdout)
+                fputs(String(data: data, encoding: .utf8)!, Darwin.stdout)
+                fflush(Darwin.stdout)
             }
         }
 
         standardErrorPipe.fileHandleForReading.readabilityHandler = { handle in
             let data = handle.availableData
             guard !data.isEmpty else { return }
-            let additionalOutput = String(data: data, encoding: .utf8)!
-            errorOutput += additionalOutput
-            if configuration.echoStandardError {
-                fputs(additionalOutput, Darwin.stderr)
+            standardErrorChunkMap[standardErrorChunkCount] = data
+            standardErrorChunkCount += 1
+
+            if configuration.echoStandardOutput {
+                fputs(String(data: data, encoding: .utf8)!, Darwin.stderr)
+                fflush(Darwin.stderr)
             }
         }
 
+        task.launch()
         task.waitUntilExit()
+
+        try standardOutputPipe.fileHandleForReading.close()
+        try standardErrorPipe.fileHandleForReading.close()
+
+        var standardOutput = ""
+        var errorOutput = ""
+
+        for chunk in standardOutputChunkMap.sorted(by: { $0.key < $1.key }) {
+            standardOutput += String(data: chunk.value, encoding: .utf8)!
+        }
+
+        for chunk in standardErrorChunkMap.sorted(by: { $0.key < $1.key }) {
+            errorOutput += String(data: chunk.value, encoding: .utf8)!
+        }
 
         if task.terminationStatus == 0 {
             return standardOutput.trimmingCharacters(in: configuration.defaultOutputTrimming)

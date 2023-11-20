@@ -4,6 +4,9 @@ import PackageDescription
 
 let package = Package(
     name: "Cockle",
+    platforms: [
+        .macOS(.v10_15),
+    ],
     products: [
         .library(name: "Cockle", targets: ["Cockle"]),
     ],
