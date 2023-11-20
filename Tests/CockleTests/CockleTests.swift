@@ -50,4 +50,18 @@ final class CockleTests: XCTestCase {
         try shell.rm(_rf: "testCockle2")
     }
 
+    func testStandardError() throws {
+        let shell = try Shell(configuration: .init(xtrace: true))
+
+        do {
+            try shell.grep("", "random123")
+        } catch let error as ExecutionError {
+            XCTAssertEqual(error.stdout, "")
+            XCTAssertEqual(error.stderr, "grep: random123: No such file or directory\n")
+            XCTAssertEqual(error.code, 2)
+            return
+        }
+        XCTFail("Should not reach here")
+    }
+
 }
