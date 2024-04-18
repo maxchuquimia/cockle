@@ -64,4 +64,14 @@ final class CockleTests: XCTestCase {
         XCTFail("Should not reach here")
     }
 
+    func testEnvironment() throws {
+        let shell = try Shell(configuration: .init(environment: .custom(["HELLO": "WORLD", "VALUE": "1"])))
+
+        let output = try shell.env()
+            .components(separatedBy: "\n")
+            .sorted()
+
+        XCTAssertEqual(output, ["HELLO=WORLD", "VALUE=1"])
+    }
+
 }

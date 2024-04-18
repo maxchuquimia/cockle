@@ -24,6 +24,7 @@ public extension Shell {
         task.standardError = standardErrorPipe
         task.arguments = args
         task.executableURL = URL(fileURLWithPath: path)
+        task.environment = configuration.environment.underlyingEnvironment
 
         // Read large volumes of data in the most O(1)-y way we can
         var standardOutputChunkMap: [Int: Data] = [:]

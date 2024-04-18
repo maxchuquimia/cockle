@@ -21,6 +21,9 @@ public struct ShellConfiguration {
     /// Whether a command's standard error outout should be printed as it runs.
     public let echoStandardOutput: Bool
 
+    /// The environment variables available to the shell. Defaults to the current process' environment.
+    public let environment: Environment
+
     /// Whether a command's input params names should have underscores replaces with dashes. Defualts to `true`.
     public let replaceUnderscoresWithDashes: Bool
 
@@ -32,6 +35,7 @@ public struct ShellConfiguration {
         defaultShell: String = "/bin/sh",
         echoStandardError: Bool = true,
         echoStandardOutput: Bool = true,
+        environment: Environment = .process,
         replaceUnderscoresWithDashes: Bool = true,
         xtrace: Bool = false
     ) {
@@ -39,8 +43,37 @@ public struct ShellConfiguration {
         self.defaultShell = defaultShell
         self.echoStandardError = echoStandardError
         self.echoStandardOutput = echoStandardOutput
+        self.environment = environment
         self.replaceUnderscoresWithDashes = replaceUnderscoresWithDashes
         self.xtrace = xtrace
+    }
+
+}
+
+public extension ShellConfiguration {
+
+    enum Environment {
+
+        /// Use the current process' environment
+        case process
+
+        /// Add additional environment variables to the current process' environment
+        case adding([String: String])
+
+        /// Use an entirely custom environment
+        case custom([String: String])
+
+        var underlyingEnvironment: [String: String] {
+            switch self {
+            case .process:
+                return ProcessInfo.processInfo.environment
+            case let .adding(additional):
+                return ProcessInfo.processInfo.environment.merging(additional, uniquingKeysWith: { $1 })
+            case let .custom(custom):
+                return custom
+            }
+        }
+        
     }
 
 }
