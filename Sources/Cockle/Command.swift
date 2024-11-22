@@ -45,7 +45,9 @@ open class Command {
         var args: [String] = []
         for (key, value) in withKeywordArguments {
             if !key.isEmpty {
-                if configuration.replaceUnderscoresWithDashes {
+                if !configuration.replaceCapitalizedParamUnderscoresWithDashes && !key.hasLowercaseLetters {
+                    args.append(key)
+                } else if configuration.replaceUnderscoresWithDashes {
                     args.append(key.replacingOccurrences(of: "_", with: "-"))
                 } else {
                     args.append(key)

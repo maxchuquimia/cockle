@@ -21,4 +21,8 @@ public extension String {
         components(separatedBy: .newlines)
     }
 
+    var hasLowercaseLetters: Bool {
+        contains { $0.isLowercase }
+    }
+
 }

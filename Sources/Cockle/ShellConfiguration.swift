@@ -27,6 +27,9 @@ public struct ShellConfiguration {
     /// Whether a command's input params names should have underscores replaces with dashes. Defualts to `true`.
     public let replaceUnderscoresWithDashes: Bool
 
+    /// Whether a fully capitalized command's args should have underscores replaces with dashes, e.g. SOME_ARG_NAME. Defaults to `false`.
+    public let replaceCapitalizedParamUnderscoresWithDashes: Bool
+
     /// Whether a command and its arguments should be printed before it is run. Defaults to `false`, useful for debugging.
     public let xtrace: Bool
 
@@ -37,6 +40,7 @@ public struct ShellConfiguration {
         echoStandardOutput: Bool = true,
         environment: Environment = .process,
         replaceUnderscoresWithDashes: Bool = true,
+        replaceCapitalizedParamUnderscoresWithDashes: Bool = false,
         xtrace: Bool = false
     ) {
         self.defaultOutputTrimming = defaultOutputTrimming
@@ -45,6 +49,7 @@ public struct ShellConfiguration {
         self.echoStandardOutput = echoStandardOutput
         self.environment = environment
         self.replaceUnderscoresWithDashes = replaceUnderscoresWithDashes
+        self.replaceCapitalizedParamUnderscoresWithDashes = replaceCapitalizedParamUnderscoresWithDashes
         self.xtrace = xtrace
     }
 
