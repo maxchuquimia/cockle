@@ -19,6 +19,11 @@ public final class Shell {
         try use(CD(configuration: configuration))
     }
 
+    private init(configuration: ShellConfiguration, knownCommands: [String: Command]) {
+        self.configuration = configuration
+        self.knownCommands = knownCommands
+    }
+
 }
 
 public extension Shell {
@@ -35,6 +40,25 @@ public extension Shell {
     /// Override defaults for a specific command
     func use<T: Command>(_ command: T) {
         knownCommands[command.commandName] = command
+    }
+
+    func copy(addingEnvironment moreEnvironmentVariables: [String: String]) -> Shell {
+        Shell(
+            configuration: .init(
+                defaultOutputTrimming: configuration.defaultOutputTrimming,
+                defaultShell: configuration.defaultShell,
+                echoStandardError: configuration.echoStandardError,
+                echoStandardOutput: configuration.echoStandardOutput,
+                environment: .custom(
+                    configuration.environment.underlyingEnvironment
+                        .merging(moreEnvironmentVariables, uniquingKeysWith: { $1 })
+                ),
+                replaceUnderscoresWithDashes: configuration.replaceUnderscoresWithDashes,
+                replaceCapitalizedParamUnderscoresWithDashes: configuration.replaceCapitalizedParamUnderscoresWithDashes,
+                xtrace: configuration.xtrace
+            ),
+            knownCommands: knownCommands
+        )
     }
 
 }

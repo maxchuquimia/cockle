@@ -74,4 +74,14 @@ final class CockleTests: XCTestCase {
         XCTAssertEqual(output, ["HELLO=WORLD", "VALUE=1"])
     }
 
+    func testAddingToEnvironment() throws {
+        let shell = try Shell(configuration: .init(environment: .custom(["HELLO": "WORLD", "NO": "will be overwritten"])))
+
+        let output = try shell.copy(addingEnvironment: ["YES": "2", "NO": "2"]).env()
+            .components(separatedBy: "\n")
+            .sorted()
+
+        XCTAssertEqual(output, ["HELLO=WORLD", "NO=2", "YES=2"])
+    }
+
 }
