@@ -28,6 +28,7 @@ public struct ShellConfiguration {
     public let replaceUnderscoresWithDashes: Bool
 
     /// Whether a fully capitalized command's args should have underscores replaces with dashes, e.g. SOME_ARG_NAME. Defaults to `false`.
+    /// This does not affect params that beging with an underscore.
     public let replaceCapitalizedParamUnderscoresWithDashes: Bool
 
     /// Whether a command and its arguments should be printed before it is run. Defaults to `false`, useful for debugging.
