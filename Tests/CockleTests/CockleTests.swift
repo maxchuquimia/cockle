@@ -60,7 +60,10 @@ final class CockleTests: XCTestCase {
             XCTAssertEqual(error.stderr, "grep: random123: No such file or directory\n")
             XCTAssertEqual(error.code, 2)
             return
+        } catch {
+            XCTFail("Invalid error type")
         }
+
         XCTFail("Should not reach here")
     }
 
@@ -82,6 +85,21 @@ final class CockleTests: XCTestCase {
             .sorted()
 
         XCTAssertEqual(output, ["HELLO=WORLD", "NO=2", "YES=2"])
+    }
+
+    func testBigOutput() throws {
+        let shell = try Shell(configuration: .init(echoStandardOutput: false, xtrace: false))
+
+        // Lots of words
+        let words = try shell.cat("/usr/share/dict/words")
+        XCTAssertGreaterThan(words.lines.count, 200000)
+
+        // 200+ MB of random ascii
+        let random = try shell.head(
+            _c: 99999999,
+            "/dev/urandom"
+        )
+        XCTAssertGreaterThan(random.count, 200000)
     }
 
 }

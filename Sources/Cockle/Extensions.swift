@@ -25,4 +25,26 @@ public extension String {
         contains { $0.isLowercase }
     }
 
+    init?(data: Data) {
+        if let string = String(data: data, encoding: .utf8) {
+            self = string
+        } else if let string = String(data: data, encoding: .ascii) {
+            self = string
+        } else {
+            return nil
+        }
+    }
+
+}
+
+extension Data {
+
+    init(copying dd: DispatchData) {
+        var result = Data(count: dd.count)
+        result.withUnsafeMutableBytes { buf in
+            _ = dd.copyBytes(to: buf)
+        }
+        self = result
+    }
+
 }

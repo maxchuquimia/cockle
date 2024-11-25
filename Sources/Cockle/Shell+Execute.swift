@@ -11,20 +11,40 @@ public extension Shell {
 
     /// Executes a raw command. This probably isn't the function you're looking for!
     static func executeRaw(path: String, args: [String], configuration: ShellConfiguration) throws -> String {
+        dispatchPrecondition(condition: .onQueue(.main))
+
         let path = path.trimmingCharacters(in: .whitespacesAndNewlines)
         if configuration.xtrace {
             print("[shell]", path, args)
         }
 
-        let task = Process()
-        let standardOutputPipe = Pipe()
-        let standardErrorPipe = Pipe()
+        let url = URL(fileURLWithPath: path)
 
-        task.standardOutput = standardOutputPipe
-        task.standardError = standardErrorPipe
-        task.arguments = args
-        task.executableURL = URL(fileURLWithPath: path)
-        task.environment = configuration.environment.underlyingEnvironment
+        return try launch(tool: url, arguments: args, configuration: configuration)
+    }
+
+    // Modified version of https://developer.apple.com/forums/thread/690310?answerId=688174022#688174022 with the following changes
+    // - Removed reliance on closure callback
+    // - Removed ability to pass input data streams
+    // - Added ShellConfiguration
+    // - Added support for stderr capturing
+    // - Simplified error handling
+    // - Made stdout and stderr capturing faster
+    private static func launch(tool: URL, arguments: [String] = [], configuration: ShellConfiguration) throws -> String {
+        // dispatchPrecondition(condition: .onQueue(.main))
+        if !Thread.current.isMainThread {
+            throw ExecutionError(
+                command: "",
+                code: 1,
+                stdout: "",
+                stderr: "Shell commands must be run on the main thread."
+            )
+        }
+
+        let group = DispatchGroup()
+        let inputPipe = Pipe()
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
 
         // Read large volumes of data in the most O(1)-y way we can
         var standardOutputChunkMap: [Int: Data] = [:]
@@ -32,59 +52,106 @@ public extension Shell {
         var standardErrorChunkMap: [Int: Data] = [:]
         var standardErrorChunkCount = 0
 
-        standardOutputPipe.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
-            guard !data.isEmpty else { return }
-            standardOutputChunkMap[standardOutputChunkCount] = data
-            standardOutputChunkCount += 1
+        let proc = Process()
+        proc.executableURL = tool
+        proc.arguments = arguments
+        proc.standardInput = inputPipe
+        proc.standardOutput = outputPipe
+        proc.standardError = errorPipe
+        proc.environment = configuration.environment.underlyingEnvironment
+        var isComplete = false
 
-            if configuration.echoStandardOutput {
-                fputs(String(data: data, encoding: .utf8)!, Darwin.stdout)
-                fflush(Darwin.stdout)
+        group.enter()
+        proc.terminationHandler = { process in
+            DispatchQueue.main.async {
+                group.leave()
             }
         }
 
-        standardErrorPipe.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
-            guard !data.isEmpty else { return }
-            standardErrorChunkMap[standardErrorChunkCount] = data
-            standardErrorChunkCount += 1
-
-            if configuration.echoStandardOutput {
-                fputs(String(data: data, encoding: .utf8)!, Darwin.stderr)
-                fflush(Darwin.stderr)
-            }
+        group.notify(queue: .main) {
+            isComplete = true
         }
 
-        task.launch()
-        task.waitUntilExit()
+        do {
+            try proc.run()
 
-        try standardOutputPipe.fileHandleForReading.close()
-        try standardErrorPipe.fileHandleForReading.close()
+            group.enter()
+            let readIO = DispatchIO(type: .stream, fileDescriptor: outputPipe.fileHandleForReading.fileDescriptor, queue: .main) { _ in
+                try! outputPipe.fileHandleForReading.close()
+            }
+            readIO.read(offset: 0, length: .max, queue: .main) { isDone, chunkQ, error in
+                autoreleasepool {
+                    let data = chunkQ.map { Data(copying: $0) }
+
+                    if let data, !data.isEmpty {
+                        standardOutputChunkMap[standardOutputChunkCount] = data
+                        standardOutputChunkCount += 1
+                    }
+
+                    if configuration.echoStandardOutput, let data {
+                        fputs(String(data: data)!, Darwin.stdout)
+                        fflush(Darwin.stdout)
+                    }
+
+                    if isDone || error != 0 {
+                        readIO.close()
+                        group.leave()
+                    }
+                }
+            }
+
+            group.enter()
+            let readErrorIO = DispatchIO(type: .stream, fileDescriptor: errorPipe.fileHandleForReading.fileDescriptor, queue: .main) { _ in
+                try! errorPipe.fileHandleForReading.close()
+            }
+            readErrorIO.read(offset: 0, length: .max, queue: .main) { isDone, chunkQ, error in
+                autoreleasepool {
+                    let data = chunkQ.map { Data(copying: $0) }
+
+                    if let data, !data.isEmpty {
+                        standardErrorChunkMap[standardOutputChunkCount] = data
+                        standardErrorChunkCount += 1
+                    }
+
+                    if configuration.echoStandardError, let data {
+                        fputs(String(data: data)!, Darwin.stderr)
+                        fflush(Darwin.stderr)
+                    }
+
+                    if isDone || error != 0 {
+                        readErrorIO.close()
+                        group.leave()
+                    }
+                }
+            }
+        } catch {
+            proc.terminationHandler!(proc)
+        }
+
+        while !isComplete {
+            RunLoop.current.run(mode: .default, before: .distantFuture)
+        }
 
         var standardOutput = ""
         var errorOutput = ""
-
         for chunk in standardOutputChunkMap.sorted(by: { $0.key < $1.key }) {
-            standardOutput += String(data: chunk.value, encoding: .utf8)!
+            standardOutput += String(data: chunk.value)!
         }
 
         for chunk in standardErrorChunkMap.sorted(by: { $0.key < $1.key }) {
-            errorOutput += String(data: chunk.value, encoding: .utf8)!
+            errorOutput += String(data: chunk.value)!
         }
 
-        if task.terminationStatus == 0 {
-            return standardOutput.trimmingCharacters(in: configuration.defaultOutputTrimming)
-        } else if task.terminationStatus == 127 {
-            throw NSError(domain: "\(path) not found", code: 127)
-        } else {
+        if proc.terminationStatus != 0 {
             throw ExecutionError(
-                command: path,
-                code: task.terminationStatus,
-                stdout: standardOutput,
+                command: tool.path,
+                code: proc.terminationStatus,
+                stdout: standardOutput.trimmingCharacters(in: configuration.defaultOutputTrimming),
                 stderr: errorOutput
             )
         }
+
+        return standardOutput.trimmingCharacters(in: configuration.defaultOutputTrimming)
     }
 
 }
