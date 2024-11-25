@@ -94,12 +94,18 @@ final class CockleTests: XCTestCase {
         let words = try shell.cat("/usr/share/dict/words")
         XCTAssertGreaterThan(words.lines.count, 200000)
 
-        // 200+ MB of random ascii
-        let random = try shell.head(
-            _c: 99999999,
-            "/dev/urandom"
-        )
-        XCTAssertGreaterThan(random.count, 200000)
+        let expectation = expectation(description: "Big output finishes")
+        DispatchQueue(label: "bg-queue").async {
+            // 200+ MB of random ascii
+            let random = try! shell.head(
+                _c: 99999999,
+                "/dev/urandom"
+            )
+            XCTAssertGreaterThan(random.count, 200000)
+            expectation.fulfill()
+        }
+
+        waitForExpectations(timeout: 20)
     }
 
 }

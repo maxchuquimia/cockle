@@ -11,11 +11,10 @@ public extension Shell {
 
     /// Executes a raw command. This probably isn't the function you're looking for!
     static func executeRaw(path: String, args: [String], configuration: ShellConfiguration) throws -> String {
-        dispatchPrecondition(condition: .onQueue(.main))
-
         let path = path.trimmingCharacters(in: .whitespacesAndNewlines)
         if configuration.xtrace {
             print("[shell]", path, args)
+            fflush(Darwin.stdout)
         }
 
         let url = URL(fileURLWithPath: path)
@@ -30,16 +29,17 @@ public extension Shell {
     // - Added support for stderr capturing
     // - Simplified error handling
     // - Made stdout and stderr capturing faster
+    // - Attempt to remove reliance on being called from main thread
     private static func launch(tool: URL, arguments: [String] = [], configuration: ShellConfiguration) throws -> String {
         // dispatchPrecondition(condition: .onQueue(.main))
-        if !Thread.current.isMainThread {
-            throw ExecutionError(
-                command: "",
-                code: 1,
-                stdout: "",
-                stderr: "Shell commands must be run on the main thread."
-            )
-        }
+//        if !Thread.current.isMainThread {
+//            throw ExecutionError(
+//                command: "",
+//                code: 1,
+//                stdout: "",
+//                stderr: "Shell commands must be run on the main thread."
+//            )
+//        }
 
         let group = DispatchGroup()
         let inputPipe = Pipe()
@@ -63,7 +63,8 @@ public extension Shell {
 
         group.enter()
         proc.terminationHandler = { process in
-            DispatchQueue.main.async {
+            // Wait some time in case proc.run() exits immediately - we want the code below it to run first
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 group.leave()
             }
         }
