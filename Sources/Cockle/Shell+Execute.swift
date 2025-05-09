@@ -38,10 +38,7 @@ public extension Shell {
             standardOutputChunkMap[standardOutputChunkCount] = data
             standardOutputChunkCount += 1
 
-            if configuration.echoStandardOutput {
-                fputs(String(data: data, encoding: .utf8)!, Darwin.stdout)
-                fflush(Darwin.stdout)
-            }
+            configuration.standardOutputHandler.handleOutput(data)
         }
 
         standardErrorPipe.fileHandleForReading.readabilityHandler = { handle in
@@ -50,10 +47,7 @@ public extension Shell {
             standardErrorChunkMap[standardErrorChunkCount] = data
             standardErrorChunkCount += 1
 
-            if configuration.echoStandardOutput {
-                fputs(String(data: data, encoding: .utf8)!, Darwin.stderr)
-                fflush(Darwin.stderr)
-            }
+            configuration.standardErrorHandler.handleOutput(data)
         }
 
         task.launch()
@@ -118,7 +112,7 @@ public extension Shell {
             return try Shell.executeRaw(
                 path: shell,
                 args: ["-c", "which \(command)"],
-                configuration: .init(echoStandardOutput: false, xtrace: false)
+                configuration: .init(standardOutputHandler: NoOutputPrinter(), xtrace: false)
             )
         } catch {
             throw ExecutionError(

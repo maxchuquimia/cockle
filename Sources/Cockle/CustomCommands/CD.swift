@@ -20,7 +20,7 @@ final class CD: Command {
         let newPath = try Shell.executeRaw(
             path: configuration.defaultShell,
             args: ["-c", "cd '\(path)' && pwd"],
-            configuration: .init(echoStandardOutput: false)
+            configuration: .init(standardOutputHandler: NoOutputPrinter())
         )
 
         FileManager.default.changeCurrentDirectoryPath((newPath as NSString).expandingTildeInPath)

@@ -47,14 +47,46 @@ public extension Shell {
             configuration: .init(
                 defaultOutputTrimming: configuration.defaultOutputTrimming,
                 defaultShell: configuration.defaultShell,
-                echoStandardError: configuration.echoStandardError,
-                echoStandardOutput: configuration.echoStandardOutput,
                 environment: .custom(
                     configuration.environment.underlyingEnvironment
                         .merging(moreEnvironmentVariables, uniquingKeysWith: { $1 })
                 ),
                 replaceUnderscoresWithDashes: configuration.replaceUnderscoresWithDashes,
                 replaceCapitalizedParamUnderscoresWithDashes: configuration.replaceCapitalizedParamUnderscoresWithDashes,
+                standardErrorHandler: configuration.standardErrorHandler,
+                standardOutputHandler: configuration.standardOutputHandler,
+                xtrace: configuration.xtrace
+            ),
+            knownCommands: knownCommands
+        )
+    }
+
+    func copy(withStandardErrorHandler standardErrorHandler: OutputHandler) -> Shell {
+        Shell(
+            configuration: .init(
+                defaultOutputTrimming: configuration.defaultOutputTrimming,
+                defaultShell: configuration.defaultShell,
+                environment: configuration.environment,
+                replaceUnderscoresWithDashes: configuration.replaceUnderscoresWithDashes,
+                replaceCapitalizedParamUnderscoresWithDashes: configuration.replaceCapitalizedParamUnderscoresWithDashes,
+                standardErrorHandler: standardErrorHandler,
+                standardOutputHandler: configuration.standardOutputHandler,
+                xtrace: configuration.xtrace
+            ),
+            knownCommands: knownCommands
+        )
+    }
+
+    func copy(withStandardOutputHandler standardOutputHandler: OutputHandler) -> Shell {
+        Shell(
+            configuration: .init(
+                defaultOutputTrimming: configuration.defaultOutputTrimming,
+                defaultShell: configuration.defaultShell,
+                environment: configuration.environment,
+                replaceUnderscoresWithDashes: configuration.replaceUnderscoresWithDashes,
+                replaceCapitalizedParamUnderscoresWithDashes: configuration.replaceCapitalizedParamUnderscoresWithDashes,
+                standardErrorHandler: configuration.standardErrorHandler,
+                standardOutputHandler: standardOutputHandler,
                 xtrace: configuration.xtrace
             ),
             knownCommands: knownCommands
