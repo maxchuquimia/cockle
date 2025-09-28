@@ -12,7 +12,7 @@ public struct ShellConfiguration {
     /// A character set to trim from any output returned by running a command. Defaults to newlines and whitespace.
     public let defaultOutputTrimming: CharacterSet
 
-    /// The default shell to use with `-c` whilst discovering a command's path. Defaults to `/bin/sh`.
+    /// The default shell to use with `-c` whilst `cd`-ing. Defaults to `/bin/sh`.
     public let defaultShell: String
 
     /// The environment variables available to the shell. Defaults to the current process' environment.
@@ -52,34 +52,6 @@ public struct ShellConfiguration {
         self.standardErrorHandler = standardErrorHandler
         self.standardOutputHandler = standardOutputHandler
         self.xtrace = xtrace
-    }
-
-}
-
-public extension ShellConfiguration {
-
-    enum Environment {
-
-        /// Use the current process' environment
-        case process
-
-        /// Add additional environment variables to the current process' environment
-        case adding([String: String])
-
-        /// Use an entirely custom environment
-        case custom([String: String])
-
-        var underlyingEnvironment: [String: String] {
-            switch self {
-            case .process:
-                return ProcessInfo.processInfo.environment
-            case let .adding(additional):
-                return ProcessInfo.processInfo.environment.merging(additional, uniquingKeysWith: { $1 })
-            case let .custom(custom):
-                return custom
-            }
-        }
-        
     }
 
 }

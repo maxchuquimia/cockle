@@ -13,23 +13,23 @@ _The cool names [ShellSwift](https://github.com/kareman/SwiftShell), [Shift](htt
 ```swift
 let shell = try Shell()
 
-try shell.git(
+try await shell.git(
     clone: (),
     __depth: 5,
     __branch: "develop",
     "https://github.com/org/cool-repo.git "
 )
 
-try shell.cd("cool-repo")
+try await shell.cd("cool-repo")
 
-let history = try shell.git(log: (), __oneline: ())
+let history = try await shell.git(log: (), __oneline: ())
 ```
 
 ### Archiving using Xcodebuild
 ```swift
 let shell = try Shell()
 
-try shell.xcodebuild(
+try await shell.xcodebuild(
     archive: (),
     _project: "CoolApp.xcodeproj",
     _scheme: "CoolApp-Prod",
@@ -41,12 +41,12 @@ try shell.xcodebuild(
 ```swift
 let shell = try Shell()
 
-try shell.mkdir(_p: "cockle/example")
+try await shell.mkdir(_p: "cockle/example")
 
 for ext in [".txt", ".swift", ".md"] {
-    try shell.touch("cockle/example/Hello" + ext)
+    try await shell.touch("cockle/example/Hello" + ext)
 }
 
-let allFiles = try shell.ls(_l: (), _a: ())
+let allFiles = try await shell.ls(_l: (), _a: ())
 print(allFiles.lines)
 ```

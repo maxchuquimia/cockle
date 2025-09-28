@@ -6,18 +6,19 @@
 //
 
 import Foundation
+import struct Subprocess.Executable
 
 /// Manually performs directory changing so that `cd` behaves as expected (is maintained throughout a script).
-final class CD: Command {
+final class CD: Command, @unchecked Sendable {
     
     private var previousDirectory = FileManager.default.currentDirectoryPath
 
-    override func execute(using args: [String]) throws -> String {
+    override func execute(using args: [String]) async throws -> String {
         let path = ((args.first ?? "~") as NSString).expandingTildeInPath
 
         // This is likely naive, is it safe to always single-quote the path?
         // We definitely need the new working directory to be printed in the same command though...
-        let newPath = try Shell.executeRaw(
+        let newPath = try await Shell.executeRaw(
             path: configuration.defaultShell,
             args: ["-c", "cd '\(path)' && pwd"],
             configuration: .init(standardOutputHandler: NoOutputPrinter())

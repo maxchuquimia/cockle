@@ -42,15 +42,13 @@ public extension Shell {
         knownCommands[command.commandName] = command
     }
 
+    /// - Warning: As of 2.0.0 this function relies on Swift Subprocess and has a bug in some scenarios: https://github.com/swiftlang/swift-subprocess/issues/191
     func copy(addingEnvironment moreEnvironmentVariables: [String: String]) -> Shell {
         Shell(
             configuration: .init(
                 defaultOutputTrimming: configuration.defaultOutputTrimming,
                 defaultShell: configuration.defaultShell,
-                environment: .custom(
-                    configuration.environment.underlyingEnvironment
-                        .merging(moreEnvironmentVariables, uniquingKeysWith: { $1 })
-                ),
+                environment: configuration.environment.adding(moreEnvironmentVariables),
                 replaceUnderscoresWithDashes: configuration.replaceUnderscoresWithDashes,
                 replaceCapitalizedParamUnderscoresWithDashes: configuration.replaceCapitalizedParamUnderscoresWithDashes,
                 standardErrorHandler: configuration.standardErrorHandler,

@@ -1,82 +1,76 @@
 //
-//  executeInShell.swift
+//  Shell+Execute.swift
 //
 //
 //  Created by Max Chuquimia on 4/11/2023.
 //
 
 import Foundation
+import Subprocess
+import System
 
 public extension Shell {
 
+    /// Returns the path to a command with the given name
+    static func path(for commandName: String, in environment: ShellConfiguration.Environment) throws -> String {
+        try Executable.name(commandName)
+            .resolveExecutablePath(
+                in: environment.asSubprocessEnvironment()
+            )
+            .string
+    }
+
     /// Executes a raw command. This probably isn't the function you're looking for!
-    static func executeRaw(path: String, args: [String], configuration: ShellConfiguration) throws -> String {
+    static func executeRaw(path: String, args: [String], configuration: ShellConfiguration) async throws -> String {
         let path = path.trimmingCharacters(in: .whitespacesAndNewlines)
         if configuration.xtrace {
             print("[shell]", path, args)
         }
 
-        let task = Process()
-        let standardOutputPipe = Pipe()
-        let standardErrorPipe = Pipe()
+        let subprocessResult = try await Subprocess.run(
+            .path(FilePath(path)),
+            arguments: Arguments(args),
+            environment: configuration.environment.asSubprocessEnvironment(),
+            body: { _, _, standardOutput, standardError in
+                let stdout = Task {
+                    var content = ""
+                    for try await line in standardOutput.lines(encoding: UTF8.self, bufferingPolicy: .unbounded) {
+                        guard !line.isEmpty else { continue }
+                        configuration.standardOutputHandler.handleOutput(line)
+                        content.append(contentsOf: line)
+                    }
+                    return content
+                }
 
-        task.standardOutput = standardOutputPipe
-        task.standardError = standardErrorPipe
-        task.arguments = args
-        task.executableURL = URL(fileURLWithPath: path)
-        task.environment = configuration.environment.underlyingEnvironment
+                let stderr = Task {
+                    var content = ""
+                    for try await line in standardError.lines(encoding: UTF8.self, bufferingPolicy: .unbounded) {
+                        guard !line.isEmpty else { continue }
+                        configuration.standardErrorHandler.handleOutput(line)
+                        content.append(contentsOf: line)
+                    }
+                    return content
+                }
 
-        // Read large volumes of data in the most O(1)-y way we can
-        var standardOutputChunkMap: [Int: Data] = [:]
-        var standardOutputChunkCount = 0
-        var standardErrorChunkMap: [Int: Data] = [:]
-        var standardErrorChunkCount = 0
+                return try await (stdout: stdout.value, stderr: stderr.value)
+            }
+        )
 
-        standardOutputPipe.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
-            guard !data.isEmpty else { return }
-            standardOutputChunkMap[standardOutputChunkCount] = data
-            standardOutputChunkCount += 1
-
-            configuration.standardOutputHandler.handleOutput(data)
+        let exitCode = switch subprocessResult.terminationStatus {
+        case let .exited(code): code
+        case let .unhandledException(code): code
         }
 
-        standardErrorPipe.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
-            guard !data.isEmpty else { return }
-            standardErrorChunkMap[standardErrorChunkCount] = data
-            standardErrorChunkCount += 1
-
-            configuration.standardErrorHandler.handleOutput(data)
-        }
-
-        task.launch()
-        task.waitUntilExit()
-
-        try standardOutputPipe.fileHandleForReading.close()
-        try standardErrorPipe.fileHandleForReading.close()
-
-        var standardOutput = ""
-        var errorOutput = ""
-
-        for chunk in standardOutputChunkMap.sorted(by: { $0.key < $1.key }) {
-            standardOutput += String(data: chunk.value, encoding: .utf8)!
-        }
-
-        for chunk in standardErrorChunkMap.sorted(by: { $0.key < $1.key }) {
-            errorOutput += String(data: chunk.value, encoding: .utf8)!
-        }
-
-        if task.terminationStatus == 0 {
-            return standardOutput.trimmingCharacters(in: configuration.defaultOutputTrimming)
-        } else if task.terminationStatus == 127 {
+        if exitCode == 0 {
+            return subprocessResult.value.stdout.trimmingCharacters(in: configuration.defaultOutputTrimming)
+        } else if exitCode == 127 {
             throw NSError(domain: "\(path) not found", code: 127)
         } else {
             throw ExecutionError(
                 command: path,
-                code: task.terminationStatus,
-                stdout: standardOutput,
-                stderr: errorOutput
+                code: exitCode,
+                stdout: subprocessResult.value.stdout,
+                stderr: subprocessResult.value.stderr
             )
         }
     }
@@ -100,28 +94,6 @@ public struct ExecutionError: LocalizedError {
 
     public var errorDescription: String? {
         "\(command) exited with error code \(code)."
-    }
-
-}
-
-public extension Shell {
-
-    /// Silently find the path to a specific command
-    static func which(command: String, shell: String) throws -> String {
-        do {
-            return try Shell.executeRaw(
-                path: shell,
-                args: ["-c", "which \(command)"],
-                configuration: .init(standardOutputHandler: NoOutputPrinter(), xtrace: false)
-            )
-        } catch {
-            throw ExecutionError(
-                command: "which",
-                code: 1,
-                stdout: "",
-                stderr: "Unable to locate command '\(command)'"
-            )
-        }
     }
 
 }
