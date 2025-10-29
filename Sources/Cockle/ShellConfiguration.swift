@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct ShellConfiguration {
+public struct ShellConfiguration: Sendable {
 
     /// A character set to trim from any output returned by running a command. Defaults to newlines and whitespace.
     public let defaultOutputTrimming: CharacterSet

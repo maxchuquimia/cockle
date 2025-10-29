@@ -78,8 +78,6 @@ final class CockleTests: XCTestCase {
     }
 
     func testAddingToEnvironment() async throws {
-        try XCTSkipIf(true, "https://github.com/swiftlang/swift-subprocess/issues/191")
-
         let shell = try Shell(configuration: .init(environment: .custom(["HELLO": "WORLD", "NO": "will be overwritten"])))
 
         let output = try await shell.copy(addingEnvironment: ["YES": "2", "NO": "2"]).env()

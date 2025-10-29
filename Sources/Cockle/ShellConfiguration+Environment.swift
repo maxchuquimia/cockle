@@ -10,7 +10,7 @@ import struct Subprocess.Environment
 
 public extension ShellConfiguration {
 
-    struct Environment {
+    struct Environment: Sendable {
 
         internal enum Configuration {
             /// Use the current process' environment

@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.2
 
 import PackageDescription
 
@@ -11,7 +11,7 @@ let package = Package(
         .library(name: "Cockle", targets: ["Cockle"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/swiftlang/swift-subprocess", exact: "0.1.0"),
+        .package(url: "https://github.com/swiftlang/swift-subprocess", from: "0.2.1"),
     ],
     targets: [
         .target(

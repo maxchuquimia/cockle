@@ -8,7 +8,7 @@
 import Foundation
 
 /// A protocol for handling command output.
-public protocol OutputHandler {
+public protocol OutputHandler: Sendable {
     /// Handles the output of a command, typically used to print to the console.
     /// - Parameter data: The output data from the command. The amount is determined by the command's output, no guarantees are made about it being a single line etc.
     func handleOutput(_ line: String)
