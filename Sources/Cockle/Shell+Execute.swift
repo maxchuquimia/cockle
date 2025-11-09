@@ -33,7 +33,7 @@ public extension Shell {
     static func executeRaw(path: String, args: [String], configuration: ShellConfiguration) async throws -> String {
         let path = path.trimmingCharacters(in: .whitespacesAndNewlines)
         if configuration.xtrace {
-            print("[shell]", path, args)
+            print("[shell]", path, args.map(\.shellEscaped).joined(separator: " "))
         }
 
         let subprocessResult = try await Subprocess.run(
