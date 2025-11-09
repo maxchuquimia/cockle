@@ -41,6 +41,13 @@ open class Command: @unchecked Sendable {
         try await execute(using: withArguments)
     }
 
+    /// Calls the command with an array of arguments, e.g. `command(["-a", "1", "--verbose"])`
+    @_disfavoredOverload
+    @discardableResult
+    public func dynamicallyCall(withArguments: [[String]]) async throws -> String {
+        try await execute(using: withArguments.flatMap { $0 })
+    }
+
     /// Calls the command with a Swift-y list of arguments. Pass `()` for any blanks, e.g. for `command sub-command -f --value 3` use `command(sub_command: (), _f: (), __value: 3)`
     @discardableResult
     public func dynamicallyCall(withKeywordArguments: KeyValuePairs<String, Any>) async throws -> String {
@@ -56,7 +63,11 @@ open class Command: @unchecked Sendable {
                 }
             }
 
-            if type(of: value) != Void.self {
+            if type(of: value) == [String].self {
+                for string in value as! [String] {
+                    args.append(string)
+                }
+            } else if type(of: value) != Void.self {
                 args.append(String(describing: value))
             }
         }

@@ -53,6 +53,19 @@ final class CockleTests: XCTestCase {
         try await shell.rm(_rf: "testCockle2")
     }
 
+    func testArrayArgs() async throws {
+        let shell = try Shell(configuration: .init(defaultOutputTrimming: .none, xtrace: true))
+
+        let result1 = try await shell.echo(_n: (), ["1", "2", "3"])
+        XCTAssertEqual(result1, "1 2 3")
+
+        let result2 = try await shell.echo(_n: ["1", "2", "3"])
+        XCTAssertEqual(result2, "1 2 3")
+
+        let result3 = try await shell.echo(["1", "2", "3"])
+        XCTAssertEqual(result3, "1 2 3\n")
+    }
+
     func testStandardError() async throws {
         let shell = try Shell(configuration: .init(xtrace: true))
 

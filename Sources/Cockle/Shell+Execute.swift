@@ -11,6 +11,15 @@ import System
 
 public extension Shell {
 
+    func path(for commandName: String) throws -> String {
+        try Self.path(for: commandName, in: configuration.environment)
+    }
+
+    /// Executes a raw command. This probably isn't the function you're looking for!
+    func execute(path: String, args: [String]) async throws -> String {
+        try await Self.executeRaw(path: path, args: args, configuration: configuration)
+    }
+
     /// Returns the path to a command with the given name
     static func path(for commandName: String, in environment: ShellConfiguration.Environment) throws -> String {
         try Executable.name(commandName)
