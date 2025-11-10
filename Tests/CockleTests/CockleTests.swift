@@ -15,7 +15,7 @@ final class CockleTests: XCTestCase {
 
         try await shell.cd("/tmp")
         var stdout = try await shell.pwd()
-        XCTAssertEqual(stdout, "/tmp")
+        XCTAssertTrue(stdout.hasSuffix("/tmp")) // Appears as /private/tmp when run from CLI
 
         let randomDirectoryName = UUID().uuidString
         try await shell.mkdir(randomDirectoryName)
@@ -36,7 +36,7 @@ final class CockleTests: XCTestCase {
 
         try await shell.cd("..")
         stdout = try await shell.pwd()
-        XCTAssertEqual(stdout, "/tmp")
+        XCTAssertTrue(stdout.hasSuffix("/tmp")) // Appears as /private/tmp when run from CLI
 
         try await shell.rm(_rf: (), randomDirectoryName)
     }
@@ -98,6 +98,25 @@ final class CockleTests: XCTestCase {
             .sorted()
 
         XCTAssertEqual(output, ["HELLO=WORLD", "NO=2", "YES=2"])
+    }
+
+    func testAddingToAddingEnvironment() async throws {
+        let shell = try Shell(
+            configuration: .init(
+                environment: .adding(["A": "1"]), // Start with .adding
+                standardErrorHandler: StandardOutputPrinter(),
+                standardOutputHandler: StandardErrorPrinter(),
+                xtrace: true
+            )
+        )
+
+        let shell2 = shell.copy(addingEnvironment: ["NEW": "5"])
+        let output = try await shell2.env()
+            .components(separatedBy: "\n")
+            .sorted()
+
+        XCTAssertTrue(output.contains("A=1"))
+        XCTAssertTrue(output.contains("NEW=5"))
     }
 
 }
