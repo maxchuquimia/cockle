@@ -7,10 +7,12 @@
 
 import Foundation
 import Darwin
+import Subprocess
+import System
 
 /// A shell command.
 @dynamicCallable
-open class Command {
+open class Command: @unchecked Sendable {
     public let commandName: String
     public var commandPath: String
     public var configuration: ShellConfiguration
@@ -24,7 +26,7 @@ open class Command {
             .lowercased()
             .replacingOccurrences(of: ".type", with: "")
 
-        self.commandPath = try Shell.which(command: self.commandName, shell: configuration.defaultShell)
+        self.commandPath = try Shell.path(for: self.commandName, in: configuration.environment)
     }
 
     public init(commandName: String, commandPath: String, configuration: ShellConfiguration = .init()) {
@@ -35,13 +37,20 @@ open class Command {
 
     /// Calls the command with a raw list of arguments, e.g. `command("-a", "1", "--verbose")`
     @discardableResult
-    public func dynamicallyCall(withArguments: [String]) throws -> String {
-        try execute(using: withArguments)
+    public func dynamicallyCall(withArguments: [String]) async throws -> String {
+        try await execute(using: withArguments)
+    }
+
+    /// Calls the command with an array of arguments, e.g. `command(["-a", "1", "--verbose"])`
+    @_disfavoredOverload
+    @discardableResult
+    public func dynamicallyCall(withArguments: [[String]]) async throws -> String {
+        try await execute(using: withArguments.flatMap { $0 })
     }
 
     /// Calls the command with a Swift-y list of arguments. Pass `()` for any blanks, e.g. for `command sub-command -f --value 3` use `command(sub_command: (), _f: (), __value: 3)`
     @discardableResult
-    public func dynamicallyCall(withKeywordArguments: KeyValuePairs<String, Any>) throws -> String {
+    public func dynamicallyCall(withKeywordArguments: KeyValuePairs<String, Any>) async throws -> String {
         var args: [String] = []
         for (key, value) in withKeywordArguments {
             if !key.isEmpty {
@@ -54,17 +63,21 @@ open class Command {
                 }
             }
 
-            if type(of: value) != Void.self {
+            if type(of: value) == [String].self {
+                for string in value as! [String] {
+                    args.append(string)
+                }
+            } else if type(of: value) != Void.self {
                 args.append(String(describing: value))
             }
         }
 
-        return try execute(using: args)
+        return try await execute(using: args)
     }
 
     /// Overridable function called to interface with the real Shell.
-    open func execute(using args: [String]) throws -> String {
-        try Shell.executeRaw(path: commandPath, args: args, configuration: configuration)
+    open func execute(using args: [String]) async throws -> String {
+        try await Shell.executeRaw(path: commandPath, args: args, configuration: configuration)
     }
 
 }
